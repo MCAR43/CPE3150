@@ -1,4 +1,4 @@
-#include <reg51.h>
+#include "reg932.h"
 #include <stdlib.h>
 sbit mole0_0 = P2^4;//LEDs
 sbit mole0_1 = P0^5;
@@ -214,20 +214,33 @@ unsigned char wait(int difficulty, unsigned char row, unsigned char col)//Boolea
 	return 0;//button was never pressed
 }//end wait function
 
+void setPorts(void)
+{
+	P0M1 = 0x00;//Set ports 0, 1, and 2 into bi-mode - comment out until it's ready for the simon2
+	P0M2 = 0x00;
+	P1M1 = 0x00;
+	P1M2 = 0x00;
+	P2M1 = 0x00;
+	P2M2 = 0x00;
+}
+
+
 void main(void)
 {
-	//P0M1 = 0;//Set ports 0, 1, and 2 into bi-mode - comment out until it's ready for the simon2
-	//P0M2 = 0;
-	//P1M1 = 0;
-	//P1M2 = 0;
-	//P2M0 = 0;
-	//P2M1 = 0;
-	
 	unsigned int difficulty = 860;//using the max demay for a timer, this is the number of loops that we will wait for at max time
-	
+	unsigned char test = 0;
+	setPorts();//has to be called after these variables are declared
 	//Example
-	unsigned char test = wait(difficulty, 1, 1); //This will wait for about a second before returning, if pressed the function will return 1 right as it's pressed
+	setLED(1, 1);
+ 	test = wait(difficulty, 1, 1); //This will wait for about a second before returning, if pressed the function will return 1 right as it's pressed
 	//if not pressed it will wait the full timer
+	if(test)
+	{
+		clearLED(1, 1);
+	}
+
+
+
 	
 	while(1);
 	
