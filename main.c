@@ -24,6 +24,7 @@ sbit hole2_2 = P2 ^ 2;
 #define DIFFICULTY_TWO = 1400; //arbitrary test numbers, change these later
 #define DIFFICULTY_THREE = 2000;
 
+void delay();
 void setLED(unsigned char row, unsigned char col); //Sets the specified LED (sets it to 0)
 void clearLED(unsigned char row, unsigned char col); //Clears the specified LED (sets it to 1)
 unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
@@ -38,26 +39,63 @@ void main(void) {
 
     unsigned int difficulty; //using the max demay for a timer, this is the number of loops that we will wait for at max time
     unsigned char test = 0;
-    unsigned char gameOver = 0; //Var to decide if the game is over (main loop control var)
+    unsigned char menu = 0; //Var to decide if the game is over (main loop control var)
+	unsigned char gameOver = 0;
+	unsigned char row = 0;
+	unsigned char col = 0;
+	unsigned char score = 0;
+	unsigned char result = 0;
+	unsigned char i = 0;
 	setPorts(); //has to be called after these variables are declared
+	setLED(0, 0); //Difficulty One
+    setLED(0, 1); //Difficulty Two
+    setLED(0, 2); //Difficulty Three
     
-
     while (1) {
-      do { //Main Menu Loop
+      
+	  do { //Main Menu Loop
         //Should probably do this all in a function to keep our Main clean, fuck it, i'll do that
-        clearAll();
-        setLED(0, 0); //Difficulty One
-        setLED(0, 1); //Difficulty Two
-        setLED(0, 2); //Difficulty Three
-        if (getHole(0, 0) == 1) {
-          difficulty = 800;
-        } else if (getHole(0, 1)) {
-          difficulty = 1600;
-        } else if (getHole(0, 2)) {
-          difficulty = 2000;
+        if (!getHole(0, 0)) {
+          difficulty = 20;
+		  menu = 1;
+        } else if (!getHole(0, 1)) {
+          difficulty = 40;
+		  menu = 1;
+        } else if (!getHole(0, 2)) {
+          difficulty = 60;
+		  menu = 1;
         }
-      } while (gameOver == 0);
+      } while (!menu);
+	  clearLED(0, 0);
+	  clearLED(0, 1);
+	  clearLED(0, 2);
+
+	  //Game Loop
+	  do {
+		row = rand() % 3;
+		col = rand() % 3;
+		setLED(row, col);
+		result = wait(difficulty, row, col);
+		if(result) {
+			score++;
+			setLED(2, 2);
+			//Send Score to Serial
+		}
+		else {
+			//Light up ohe LED on breabdoard
+			setLED(2,1);
+		}
+		clearLED(row, col);
+		delay();
+		clearLED(2,2);
+		clearLED(2,1);
+		delay();
+
+		
+
+	  }while(!gameOver);	  
     }
+
   } //End main
 
 void setLED(unsigned char row, unsigned char col) {
@@ -215,11 +253,12 @@ unsigned char wait(int difficulty, unsigned char row, unsigned char col) //Boole
   {
     unsigned int index;
     TMOD = 0x01;
-    TH0 = 0;
-    TL0 = 0; //These delays must be observable by humans, so difficulty will be number of loops
-    TR0 = 1;
+	
 
     for (index = 0; index < difficulty; index++) {
+	  TH0 = 0x00;
+      TL0 = 0x00; //These delays must be observable by humans, so difficulty will be number of loops
+      TR0 = 1;
       while (!TF0) //wait for the max time
       {
         if (getHole(row, col) == 0) //buttons are low if pressed, getHole will generate some overhead
@@ -229,8 +268,10 @@ unsigned char wait(int difficulty, unsigned char row, unsigned char col) //Boole
           return 1; //Return 1 is presses
         } //end if
       } //end while
+	  TF0 = 0;
+	  TR0 = 0;
     } //end for, difficulty 
-    return 0; //button was never pressed
+    return 0; //button was never pressed			
   } //end wait function
 
 void setPorts(void) {
@@ -247,8 +288,8 @@ void setPorts(void) {
     return ((x & 0x00FF)<< 8 | (x & 0xFF00)>>8 );
 }*/
 
-/*
-void clearAll() {
+
+/*void clearAll() {
   for (unsigned char i = 0; i < 3; i++) {
     for (unsigned char k = 0; k < 3; k++) {
       clearLED(i, k);
@@ -271,4 +312,20 @@ unsigned char setDifficulty() {
   setLED(0, 3);
   
 
+}
+
+void delay() {
+	unsigned int i = 0;
+	TMOD = 0x10;
+	for(i = 0; i < 40; i++) {
+		TH1 = 0x00;
+		TL1 = 0x00;
+		TR1 = 1;
+		while(TF1 == 0);
+		TR1 = 0;
+		TF1 = 0;	
+	
+		}
+	
+	return;
 }

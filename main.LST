@@ -1,286 +1,368 @@
-C51 COMPILER V9.54   MAIN                                                                  04/22/2017 16:29:26 PAGE 1   
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 1   
 
 
-C51 COMPILER V9.54, COMPILATION OF MODULE MAIN
-OBJECT MODULE PLACED IN main.OBJ
-COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) DEBUG OBJECTEXTEND TABS(2)
+C51 COMPILER V6.02, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE .\main.c DEBUG OBJECTEXTEND
 
-line level    source
+stmt level    source
 
-   1          #include <reg51.h>
+   1          #include "reg932.h"
    2          #include <stdlib.h>
-   3          sbit mole0_0 = P2^4;//LEDs
-   4          sbit mole0_1 = P0^5;
-   5          sbit mole0_2 = P2^7;
-   6          sbit mole1_0 = P0^6;
-   7          sbit mole1_1 = P1^6;
-   8          sbit mole1_2 = P0^4;
-   9          sbit mole2_0 = P2^5;
-  10          sbit mole2_1 = P0^7;
-  11          sbit mole2_2 = P2^6;
+   3          sbit mole0_0 = P2 ^ 4; //LEDs
+   4          sbit mole0_1 = P0 ^ 5;
+   5          sbit mole0_2 = P2 ^ 7;
+   6          sbit mole1_0 = P0 ^ 6;
+   7          sbit mole1_1 = P1 ^ 6;
+   8          sbit mole1_2 = P0 ^ 4;
+   9          sbit mole2_0 = P2 ^ 5;
+  10          sbit mole2_1 = P0 ^ 7;
+  11          sbit mole2_2 = P2 ^ 6;
   12          
-  13          sbit hole0_0 = P2^0;//Buttons
-  14          sbit hole0_1 = P0^1;
-  15          sbit hole0_2 = P2^3;
-  16          sbit hole1_0 = P0^2;
-  17          sbit hole1_1 = P1^4;
-  18          sbit hole1_2 = P0^0;
-  19          sbit hole2_0 = P2^1;
-  20          sbit hole2_1 = P0^3;
-  21          sbit hole2_2 = P2^2;
+  13          sbit hole0_0 = P2 ^ 0; //Buttons
+  14          sbit hole0_1 = P0 ^ 1;
+  15          sbit hole0_2 = P2 ^ 3;
+  16          sbit hole1_0 = P0 ^ 2;
+  17          sbit hole1_1 = P1 ^ 4;
+  18          sbit hole1_2 = P0 ^ 0;
+  19          sbit hole2_0 = P2 ^ 1;
+  20          sbit hole2_1 = P0 ^ 3;
+  21          sbit hole2_2 = P2 ^ 2;
   22          
-  23          /*int swapBytes(int x)
-  24          {
-  25              return ((x & 0x00FF)<< 8 | (x & 0xFF00)>>8 );
-  26          }*/
-  27          
-  28          void setLED(unsigned char row, unsigned char col)
-  29          {
-  30   1        switch(row)
-  31   1        {
-  32   2          case 0:
-  33   2          {
-  34   3            switch(col)
-  35   3            {
-  36   4              case 0:
-  37   4                mole0_0 = 0;
-  38   4                break;
-  39   4              case 1:
-  40   4                mole0_1 = 0;
-  41   4                break;
-  42   4              case 2:
-  43   4                mole0_2 = 0;
-  44   4                break;
-  45   4            }//end switch col
-  46   3          }//end case 0
-  47   2            break;
-  48   2          case 1:
-  49   2          {
-  50   3            switch(col)
-  51   3            {
-  52   4              case 0:
-  53   4                mole1_0 = 0;
-  54   4                break;
-  55   4              case 1:
-C51 COMPILER V9.54   MAIN                                                                  04/22/2017 16:29:26 PAGE 2   
+  23          #define DIFFICULTY_ONE = 860;
+  24          #define DIFFICULTY_TWO = 1400; //arbitrary test numbers, change these later
+  25          #define DIFFICULTY_THREE = 2000;
+  26          
+  27          void delay();
+  28          void setLED(unsigned char row, unsigned char col); //Sets the specified LED (sets it to 0)
+  29          void clearLED(unsigned char row, unsigned char col); //Clears the specified LED (sets it to 1)
+  30          unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
+  31          unsigned char wait(int difficulty, unsigned char row, unsigned char col); //Will return 1 if the button is
+             - pressed on time
+  32          unsigned char swapBytes(int); //no idea
+  33          void setPorts(void); //Making sure the LED's work on the simon-board by setting them into bi-directional m
+             -ode
+  34          void clearAll(); //Clears all LED's on the board, could prove useful
+  35          void setAll(); //Sets all LED's on the board
+  36          unsigned char setDifficulty();
+  37          
+  38          void main(void) {
+  39   1      
+  40   1          unsigned int difficulty; //using the max demay for a timer, this is the number of loops that we will w
+             -ait for at max time
+  41   1          unsigned char test = 0;
+  42   1          unsigned char menu = 0; //Var to decide if the game is over (main loop control var)
+  43   1      	unsigned char gameOver = 0;
+  44   1      	unsigned char row = 0;
+  45   1      	unsigned char col = 0;
+  46   1      	unsigned char score = 0;
+  47   1      	unsigned char result = 0;
+  48   1      	unsigned char i = 0;
+  49   1      	setPorts(); //has to be called after these variables are declared
+  50   1      	setLED(0, 0); //Difficulty One
+  51   1          setLED(0, 1); //Difficulty Two
+  52   1          setLED(0, 2); //Difficulty Three
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 2   
 
-  56   4                mole1_1 = 0;
-  57   4                break;
-  58   4              case 2:
-  59   4                mole1_2 = 0;
-  60   4                break;
-  61   4            }//end switch col
-  62   3          }//end case 1
-  63   2            break;
-  64   2          case 2:
-  65   2          {
-  66   3            switch(col)
-  67   3            {
-  68   4              case 0:
-  69   4                mole2_0 = 0;
-  70   4                break;
-  71   4              case 1:
-  72   4                mole2_1 = 0;
-  73   4                break;
-  74   4              case 2:
-  75   4                mole2_2 = 0;
-  76   4                break;
-  77   4            }//end switch col
-  78   3          }//end case 2
-  79   2            break;
-  80   2        } //end case switch
-  81   1      }
-  82          
-  83          void clearLED(unsigned char row, unsigned char col)
-  84          {
-  85   1        switch(row)
-  86   1        {
-  87   2          case 0:
-  88   2          {
-  89   3            switch(col)
-  90   3            {
-  91   4              case 0:
-  92   4                mole0_0 = 1;
-  93   4                break;
-  94   4              case 1:
-  95   4                mole0_1 = 1;
-  96   4                break;
-  97   4              case 2:
-  98   4                mole0_2 = 1;
-  99   4                break;
- 100   4            }//end switch col
- 101   3          }//end case 0
- 102   2            break;
- 103   2          case 1:
- 104   2          {
- 105   3            switch(col)
- 106   3            {
- 107   4              case 0:
- 108   4                mole1_0 = 1;
- 109   4                break;
- 110   4              case 1:
- 111   4                mole1_1 = 1;
- 112   4                break;
- 113   4              case 2:
- 114   4                mole1_2 = 1;
- 115   4                break;
- 116   4            }//end switch col
- 117   3          }//end case 1
-C51 COMPILER V9.54   MAIN                                                                  04/22/2017 16:29:26 PAGE 3   
+  53   1          
+  54   1          while (1) {
+  55   2            
+  56   2      	  do { //Main Menu Loop
+  57   3              //Should probably do this all in a function to keep our Main clean, fuck it, i'll do that
+  58   3              if (!getHole(0, 0)) {
+  59   4                difficulty = 20;
+  60   4      		  menu = 1;
+  61   4              } else if (!getHole(0, 1)) {
+  62   4                difficulty = 40;
+  63   4      		  menu = 1;
+  64   4              } else if (!getHole(0, 2)) {
+  65   4                difficulty = 60;
+  66   4      		  menu = 1;
+  67   4              }
+  68   3            } while (!menu);
+  69   2      	  clearLED(0, 0);
+  70   2      	  clearLED(0, 1);
+  71   2      	  clearLED(0, 2);
+  72   2      
+  73   2      	  //Game Loop
+  74   2      	  do {
+  75   3      		row = rand() % 3;
+  76   3      		col = rand() % 3;
+  77   3      		setLED(row, col);
+  78   3      		result = wait(difficulty, row, col);
+  79   3      		if(result) {
+  80   4      			score++;
+  81   4      			setLED(2, 2);
+  82   4      		}
+  83   3      		else {
+  84   4      			setLED(2,1);
+  85   4      		}
+  86   3      		clearLED(row, col);
+  87   3      		delay();
+  88   3      		clearLED(2,2);
+  89   3      		clearLED(2,1);
+  90   3      		delay();
+  91   3      
+  92   3      		
+  93   3      
+  94   3      	  }while(!gameOver);	  
+  95   2          }
+  96   1      
+  97   1        } //End main
+  98          
+  99          void setLED(unsigned char row, unsigned char col) {
+ 100   1        switch (row) {
+ 101   2        	case 0:
+ 102   2          {
+ 103   3            switch (col) {
+ 104   4            case 0:
+ 105   4              mole0_0 = 0;
+ 106   4              break;
+ 107   4            case 1:
+ 108   4              mole0_1 = 0;
+ 109   4              break;
+ 110   4            case 2:
+ 111   4              mole0_2 = 0;
+ 112   4              break;
+ 113   4            } //end switch col
+ 114   3          } //end case 0
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 3   
 
- 118   2            break;
- 119   2          case 2:
- 120   2          {
- 121   3            switch(col)
- 122   3            {
- 123   4              case 0:
- 124   4                mole2_0 = 1;
- 125   4                break;
- 126   4              case 1:
- 127   4                mole2_1 = 1;
- 128   4                break;
- 129   4              case 2:
- 130   4                mole2_2 = 1;
- 131   4                break;
- 132   4            }//end switch col
- 133   3          }//end case 2
- 134   2            break;
- 135   2        } //end case switch
- 136   1      }
- 137          
- 138          unsigned char getHole(unsigned char row, unsigned col)//Gets the value for the button
- 139          {
- 140   1        switch(row)
- 141   1        {
- 142   2          case 0:
- 143   2          {
- 144   3            switch(col)
- 145   3            {
- 146   4              case 0:
- 147   4                return((unsigned char)hole0_0);
- 148   4                break;
- 149   4              case 1:
- 150   4                return((unsigned char)hole0_1);
- 151   4                break;
- 152   4              case 2:
- 153   4                return((unsigned char)hole0_2);
- 154   4                break;
- 155   4            }//end switch col
- 156   3          }//end case 0
- 157   2            break;
- 158   2          case 1:
- 159   2          {
- 160   3            switch(col)
- 161   3            {
- 162   4              case 0:
- 163   4                return((unsigned char)hole1_0);
- 164   4                break;
- 165   4              case 1:
- 166   4                return((unsigned char)hole1_1);
- 167   4                break;
- 168   4              case 2:
- 169   4                return((unsigned char)hole1_2);
- 170   4                break;
- 171   4            }//end switch col
- 172   3          }//end case 1
- 173   2            break;
- 174   2          case 2:
- 175   2          {
- 176   3            switch(col)
- 177   3            {
- 178   4              case 0:
- 179   4                return((unsigned char)hole2_0);
-C51 COMPILER V9.54   MAIN                                                                  04/22/2017 16:29:26 PAGE 4   
+ 115   2          break;
+ 116   2        case 1:
+ 117   2          {
+ 118   3            switch (col) {
+ 119   4            case 0:
+ 120   4              mole1_0 = 0;
+ 121   4              break;
+ 122   4            case 1:
+ 123   4              mole1_1 = 0;
+ 124   4              break;
+ 125   4            case 2:
+ 126   4              mole1_2 = 0;
+ 127   4              break;
+ 128   4            } //end switch col
+ 129   3          } //end case 1
+ 130   2          break;
+ 131   2        case 2:
+ 132   2          {
+ 133   3            switch (col) {
+ 134   4            case 0:
+ 135   4              mole2_0 = 0;
+ 136   4              break;
+ 137   4            case 1:
+ 138   4              mole2_1 = 0;
+ 139   4              break;
+ 140   4            case 2:
+ 141   4              mole2_2 = 0;
+ 142   4              break;
+ 143   4            } //end switch col
+ 144   3          } //end case 2
+ 145   2          break;
+ 146   2        } //end case switch
+ 147   1      }
+ 148          
+ 149          void clearLED(unsigned char row, unsigned char col) {
+ 150   1        switch (row) {
+ 151   2        case 0:
+ 152   2          {
+ 153   3            switch (col) {
+ 154   4            case 0:
+ 155   4              mole0_0 = 1;
+ 156   4              break;
+ 157   4            case 1:
+ 158   4              mole0_1 = 1;
+ 159   4              break;
+ 160   4            case 2:
+ 161   4              mole0_2 = 1;
+ 162   4              break;
+ 163   4            } //end switch col
+ 164   3          } //end case 0
+ 165   2          break;
+ 166   2        case 1:
+ 167   2          {
+ 168   3            switch (col) {
+ 169   4            case 0:
+ 170   4              mole1_0 = 1;
+ 171   4              break;
+ 172   4            case 1:
+ 173   4              mole1_1 = 1;
+ 174   4              break;
+ 175   4            case 2:
+ 176   4              mole1_2 = 1;
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 4   
 
- 180   4                break;
- 181   4              case 1:
- 182   4                return((unsigned char)hole2_1);
- 183   4                break;
- 184   4              case 2:
- 185   4                return((unsigned char)hole2_2);
- 186   4                break;
- 187   4            }//end switch col
- 188   3          }//end case 2
- 189   2            break;
- 190   2        } //end case switch
- 191   1      }
- 192          
- 193          unsigned char wait(int difficulty, unsigned char row, unsigned char col)//Boolean is not a default type in
-             - C. Will return 1 if button is pressed on time
- 194          {
- 195   1        
- 196   1        unsigned int index;
- 197   1        TMOD = 0x01;
- 198   1        TH0 = 0;
- 199   1        TL0 = 0;//These delays must be observable by humans, so difficulty will be number of loops
- 200   1        TR0 = 1;
- 201   1        
- 202   1        for(index = 0; index < difficulty; index++)
- 203   1        {
- 204   2          while(!TF0)//wait for the max time
- 205   2          {
- 206   3            if(getHole(row, col)  == 0)//buttons are low if pressed, getHole will generate some overhead
- 207   3            {
- 208   4              TR0 = 0;//Stop timer
- 209   4              TF0 = 0;//Reset overflow
- 210   4              return 1;//Return 1 is presses
- 211   4            }//end if
- 212   3          }//end while
- 213   2        }//end for, difficulty 
- 214   1        return 0;//button was never pressed
- 215   1      }//end wait function
- 216          
- 217          void main(void)
- 218          {
- 219   1        //P0M1 = 0;//Set ports 0, 1, and 2 into bi-mode - comment out until it's ready for the simon2
- 220   1        //P0M2 = 0;
- 221   1        //P1M1 = 0;
- 222   1        //P1M2 = 0;
- 223   1        //P2M0 = 0;
- 224   1        //P2M1 = 0;
- 225   1        
- 226   1        unsigned int difficulty = 860;//using the max demay for a timer, this is the number of loops that we will
-             - wait for at max time
- 227   1        
- 228   1        //Example
- 229   1        unsigned char test = wait(difficulty, 1, 1); //This will wait for about a second before returning, if pre
-             -ssed the function will return 1 right as it's pressed
- 230   1        //if not pressed it will wait the full timer
- 231   1        
- 232   1        while(1);
- 233   1        
- 234   1        
- 235   1        
- 236   1        
- 237   1        
- 238   1        
-C51 COMPILER V9.54   MAIN                                                                  04/22/2017 16:29:26 PAGE 5   
+ 177   4              break;
+ 178   4            } //end switch col
+ 179   3          } //end case 1
+ 180   2          break;
+ 181   2        case 2:
+ 182   2          {
+ 183   3            switch (col) {
+ 184   4            case 0:
+ 185   4              mole2_0 = 1;
+ 186   4              break;
+ 187   4            case 1:
+ 188   4              mole2_1 = 1;
+ 189   4              break;
+ 190   4            case 2:
+ 191   4              mole2_2 = 1;
+ 192   4              break;
+ 193   4            } //end switch col
+ 194   3          } //end case 2
+ 195   2          break;
+ 196   2        } //end case switch
+ 197   1      }
+ 198          
+ 199          unsigned char getHole(unsigned char row, unsigned col) //Gets the value for the button
+ 200            {
+*** WARNING C235 IN LINE 200 OF .\MAIN.C: parameter 2: different types
+ 201   1          switch (row) {
+ 202   2          case 0:
+ 203   2            {
+ 204   3              switch (col) {
+ 205   4              case 0:
+ 206   4                return ((unsigned char) hole0_0);
+ 207   4                break;
+ 208   4              case 1:
+ 209   4                return ((unsigned char) hole0_1);
+ 210   4                break;
+ 211   4              case 2:
+ 212   4                return ((unsigned char) hole0_2);
+ 213   4                break;
+ 214   4              } //end switch col
+ 215   3            } //end case 0
+ 216   2            break;
+ 217   2          case 1:
+ 218   2            {
+ 219   3              switch (col) {
+ 220   4              case 0:
+ 221   4                return ((unsigned char) hole1_0);
+ 222   4                break;
+ 223   4              case 1:
+ 224   4                return ((unsigned char) hole1_1);
+ 225   4                break;
+ 226   4              case 2:
+ 227   4                return ((unsigned char) hole1_2);
+ 228   4                break;
+ 229   4              } //end switch col
+ 230   3            } //end case 1
+ 231   2            break;
+ 232   2          case 2:
+ 233   2            {
+ 234   3              switch (col) {
+ 235   4              case 0:
+ 236   4                return ((unsigned char) hole2_0);
+ 237   4                break;
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 5   
 
- 239   1        
- 240   1        
- 241   1        
- 242   1        
- 243   1        
- 244   1        
- 245   1        
- 246   1        
- 247   1        
- 248   1        
- 249   1      }//End main
- 250          
- 251          
-*** WARNING C291 IN LINE 191 OF main.c: not every exit path returns a value
+ 238   4              case 1:
+ 239   4                return ((unsigned char) hole2_1);
+ 240   4                break;
+ 241   4              case 2:
+ 242   4                return ((unsigned char) hole2_2);
+ 243   4                break;
+ 244   4              } //end switch col
+ 245   3            } //end case 2
+ 246   2            break;
+ 247   2          } //end case switch
+ 248   1        }
+ 249          
+ 250          unsigned char wait(int difficulty, unsigned char row, unsigned char col) //Boolean is not a default type i
+             -n C. Will return 1 if button is pressed on time
+ 251            {
+ 252   1          unsigned int index;
+ 253   1          TMOD = 0x01;
+ 254   1      	
+ 255   1      
+ 256   1          for (index = 0; index < difficulty; index++) {
+ 257   2      	  TH0 = 0x00;
+ 258   2            TL0 = 0x00; //These delays must be observable by humans, so difficulty will be number of loops
+ 259   2            TR0 = 1;
+ 260   2            while (!TF0) //wait for the max time
+ 261   2            {
+ 262   3              if (getHole(row, col) == 0) //buttons are low if pressed, getHole will generate some overhead
+ 263   3              {
+ 264   4                TR0 = 0; //Stop timer
+ 265   4                TF0 = 0; //Reset overflow
+ 266   4                return 1; //Return 1 is presses
+ 267   4              } //end if
+ 268   3            } //end while
+ 269   2      	  TF0 = 0;
+ 270   2      	  TR0 = 0;
+ 271   2          } //end for, difficulty 
+ 272   1          return 0; //button was never pressed			
+ 273   1        } //end wait function
+ 274          
+ 275          void setPorts(void) {
+ 276   1        P0M1 = 0x00; //Set ports 0, 1, and 2 into bi-mode - comment out until it's ready for the simon2
+ 277   1        P0M2 = 0x00;
+ 278   1        P1M1 = 0x00;
+ 279   1        P1M2 = 0x00;
+ 280   1        P2M1 = 0x00;
+ 281   1        P2M2 = 0x00;
+ 282   1      }
+ 283          
+ 284          /*int swapBytes(int x)
+ 285          {
+ 286              return ((x & 0x00FF)<< 8 | (x & 0xFF00)>>8 );
+ 287          }*/
+ 288          
+ 289          
+ 290          /*void clearAll() {
+ 291            for (unsigned char i = 0; i < 3; i++) {
+ 292              for (unsigned char k = 0; k < 3; k++) {
+ 293                clearLED(i, k);
+ 294              }
+ 295            }
+ 296          }
+ 297          
+ 298          void setAll() {
+C51 COMPILER V6.02  MAIN                                                                   05/04/2017 18:22:36 PAGE 6   
+
+ 299            for (unsigned char i = 0; i < 3; i++) {
+ 300              for (unsigned char k = 0; k < 3; k++) {
+ 301                setLED(i, k);
+ 302              }
+ 303            }
+ 304          }*/
+ 305          
+ 306          unsigned char setDifficulty() {
+ 307   1        clearAll();
+ 308   1        setLED(0, 1);
+ 309   1        setLED(0, 2);
+ 310   1        setLED(0, 3);
+ 311   1        
+ 312   1      
+ 313   1      }
+*** WARNING C173 IN LINE 313 OF .\MAIN.C: missing return-expression
+ 314          
+ 315          void delay() {
+ 316   1      	unsigned int i = 0;
+ 317   1      	TMOD = 0x10;
+ 318   1      	for(i = 0; i < 40; i++) {
+ 319   2      		TH1 = 0x00;
+ 320   2      		TL1 = 0x00;
+ 321   2      		TR1 = 1;
+ 322   2      		while(TF1 == 0);
+ 323   2      		TR1 = 0;
+ 324   2      		TF1 = 0;	
+ 325   2      	
+ 326   2      		}
+ 327   1      	
+ 328   1      	return;
+ 329   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    309    ----
+   CODE SIZE        =    604    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
-   DATA SIZE        =   ----       1
+   DATA SIZE        =   ----      13
    IDATA SIZE       =   ----    ----
    BIT SIZE         =   ----    ----
 END OF MODULE INFORMATION.
 
 
-C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
+C51 COMPILATION COMPLETE.  2 WARNING(S),  0 ERROR(S)
