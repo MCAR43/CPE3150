@@ -1,4 +1,5 @@
 #include "reg932.h"
+#include "uart.h"
 #include <stdlib.h>
 sbit mole0_0 = P2 ^ 4; //LEDs
 sbit mole0_1 = P0 ^ 5;
@@ -20,11 +21,17 @@ sbit hole2_0 = P2 ^ 1;
 sbit hole2_1 = P0 ^ 3;
 sbit hole2_2 = P2 ^ 2;
 
-#define DIFFICULTY_ONE = 860;
-#define DIFFICULTY_TWO = 1400; //arbitrary test numbers, change these later
-#define DIFFICULTY_THREE = 2000;
+sbit speaker = P1 ^ 7;//Speaker / buzzer
+
+#define DIFFICULTY_ONE = 20;
+#define DIFFICULTY_TWO = 40; //arbitrary test numbers, change these later
+#define DIFFICULTY_THREE = 60;
+
 
 void delay();
+void getTone();
+void missTone();
+void sendData(char score);
 void setLED(unsigned char row, unsigned char col); //Sets the specified LED (sets it to 0)
 void clearLED(unsigned char row, unsigned char col); //Clears the specified LED (sets it to 1)
 unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
@@ -34,6 +41,12 @@ void setPorts(void); //Making sure the LED's work on the simon-board by setting 
 void clearAll(); //Clears all LED's on the board, could prove useful
 void setAll(); //Sets all LED's on the board
 unsigned char setDifficulty();
+
+void buzz() interrupt 1 {
+
+speaker = ~speaker;
+
+}
 
 void main(void) {
 
@@ -50,6 +63,7 @@ void main(void) {
 	setLED(0, 0); //Difficulty One
     setLED(0, 1); //Difficulty Two
     setLED(0, 2); //Difficulty Three
+	uart_init();
     
     while (1) {
       
@@ -77,18 +91,19 @@ void main(void) {
 		setLED(row, col);
 		result = wait(difficulty, row, col);
 		if(result) {
+			sendData(score);
+			getTone();
 			score++;
-			setLED(2, 2);
 			//Send Score to Serial
 		}
 		else {
 			//Light up ohe LED on breabdoard
-			setLED(2,1);
+			missTone();
+			missTone();
+			missTone();
 		}
 		clearLED(row, col);
 		delay();
-		clearLED(2,2);
-		clearLED(2,1);
 		delay();
 
 		
@@ -305,20 +320,12 @@ void setAll() {
   }
 }*/
 
-unsigned char setDifficulty() {
-  clearAll();
-  setLED(0, 1);
-  setLED(0, 2);
-  setLED(0, 3);
-  
-
-}
 
 void delay() {
 	unsigned int i = 0;
 	TMOD = 0x10;
 	for(i = 0; i < 40; i++) {
-		TH1 = 0x00;
+		TH1 = 0xF0;
 		TL1 = 0x00;
 		TR1 = 1;
 		while(TF1 == 0);
@@ -329,3 +336,68 @@ void delay() {
 	
 	return;
 }
+
+
+void getTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) = 5309 *(This microcontroller is 6 times faster than the standard 8051)
+	TMOD = 0x01;
+	TH0 = 0xEB;
+	TL0 = 0x42;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	EA = 0;
+	ET0 = 0;
+
+	return;
+}
+
+void missTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) = 5309 *(This microcontroller is 6 times faster than the standard 8051)
+	TMOD = 0x01;
+	TH0 = 0xFF;
+	TL0 = 0xFF;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	EA = 0;
+	ET0 = 0;
+
+	return;
+}
+void sendData(char score) {
+unsigned char i = 0;
+char temp = 0;
+char sc[10] = "Score :";
+
+/*while(sc[i] != '\0'){
+	uart_transmit(sc[i]);
+	i++;
+}*/
+
+i = 0;
+temp = score+0x30;
+uart_transmit(temp);
+uart_transmit('\r');
+uart_transmit('\n');
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
