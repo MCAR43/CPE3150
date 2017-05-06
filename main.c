@@ -21,26 +21,24 @@ sbit hole2_0 = P2 ^ 1;
 sbit hole2_1 = P0 ^ 3;
 sbit hole2_2 = P2 ^ 2;
 
-sbit speaker = P1 ^ 7;//Speaker / buzzer
+sbit strike1 = P3 ^ 1;//Strike outs
+sbit strike2 = P3 ^ 0;
+sbit strike3 = P1 ^ 0;
 
-#define DIFFICULTY_ONE = 20;
-#define DIFFICULTY_TWO = 40; //arbitrary test numbers, change these later
-#define DIFFICULTY_THREE = 60;
+sbit speaker = P1 ^ 7;//Speaker / buzzer
 
 
 void delay();
+void strikeOut(unsigned char s);
 void getTone();
 void missTone();
+void endGame();
 void sendData(char score);
 void setLED(unsigned char row, unsigned char col); //Sets the specified LED (sets it to 0)
 void clearLED(unsigned char row, unsigned char col); //Clears the specified LED (sets it to 1)
 unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
 unsigned char wait(int difficulty, unsigned char row, unsigned char col); //Will return 1 if the button is pressed on time
-unsigned char swapBytes(int); //no idea
 void setPorts(void); //Making sure the LED's work on the simon-board by setting them into bi-directional mode
-void clearAll(); //Clears all LED's on the board, could prove useful
-void setAll(); //Sets all LED's on the board
-unsigned char setDifficulty();
 
 void buzz() interrupt 1 {
 
@@ -59,24 +57,26 @@ void main(void) {
 	unsigned char score = 0;
 	unsigned char result = 0;
 	unsigned char i = 0;
+	unsigned char strikes = 0;
 	setPorts(); //has to be called after these variables are declared
-	setLED(0, 0); //Difficulty One
-    setLED(0, 1); //Difficulty Two
-    setLED(0, 2); //Difficulty Three
 	uart_init();
     
     while (1) {
+
+		setLED(0, 0); //Difficulty One
+    	setLED(0, 1); //Difficulty Two
+    	setLED(0, 2); //Difficulty Three
       
 	  do { //Main Menu Loop
-        //Should probably do this all in a function to keep our Main clean, fuck it, i'll do that
+        //Should probably do this all in a function to keep our Main clean
         if (!getHole(0, 0)) {
-          difficulty = 20;
+          difficulty = 20;//Hard - Magic
 		  menu = 1;
         } else if (!getHole(0, 1)) {
-          difficulty = 40;
+          difficulty = 40;//Medium - Magic
 		  menu = 1;
         } else if (!getHole(0, 2)) {
-          difficulty = 60;
+          difficulty = 60;//Easy - Magic
 		  menu = 1;
         }
       } while (!menu);
@@ -91,16 +91,20 @@ void main(void) {
 		setLED(row, col);
 		result = wait(difficulty, row, col);
 		if(result) {
+			score++;
 			sendData(score);
 			getTone();
-			score++;
 			//Send Score to Serial
 		}
 		else {
 			//Light up ohe LED on breabdoard
+			strikes++;
 			missTone();
 			missTone();
 			missTone();
+			strikeOut(strikes);
+			if(strikes == 3)
+				gameOver = 1;
 		}
 		clearLED(row, col);
 		delay();
@@ -108,7 +112,14 @@ void main(void) {
 
 		
 
-	  }while(!gameOver);	  
+	  }while(!gameOver);
+
+	  endGame();
+	  menu = 0;
+	  strikes = 0;
+	  score = 0;
+	  gameOver = 0;
+ 
     }
 
   } //End main
@@ -298,28 +309,6 @@ void setPorts(void) {
   P2M2 = 0x00;
 }
 
-/*int swapBytes(int x)
-{
-    return ((x & 0x00FF)<< 8 | (x & 0xFF00)>>8 );
-}*/
-
-
-/*void clearAll() {
-  for (unsigned char i = 0; i < 3; i++) {
-    for (unsigned char k = 0; k < 3; k++) {
-      clearLED(i, k);
-    }
-  }
-}
-
-void setAll() {
-  for (unsigned char i = 0; i < 3; i++) {
-    for (unsigned char k = 0; k < 3; k++) {
-      setLED(i, k);
-    }
-  }
-}*/
-
 
 void delay() {
 	unsigned int i = 0;
@@ -348,7 +337,6 @@ void getTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) 
 	delay();
 	TR0 = 0;
 	TF0 = 0;
-	EA = 0;
 	ET0 = 0;
 
 	return;
@@ -364,7 +352,6 @@ void missTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*)
 	delay();
 	TR0 = 0;
 	TF0 = 0;
-	EA = 0;
 	ET0 = 0;
 
 	return;
@@ -373,18 +360,41 @@ void sendData(char score) {
 unsigned char i = 0;
 char temp = 0;
 char sc[10] = "Score :";
+//lower = score & 0x0F;
+//upper = score & 0xF0;
+//upper = (lower > 9) ? (upper+1) : (upper);
+//upper = (upper % 10) + 0x30;
+//lower = (lower % 10) + 0x30;
+temp = ((score / 10) << 4) | (score % 10);
 
-/*while(sc[i] != '\0'){
+while(sc[i] != '\0'){
 	uart_transmit(sc[i]);
 	i++;
-}*/
+}
 
 i = 0;
-temp = score+0x30;
-uart_transmit(temp);
+uart_transmit(((temp & 0xF0) >> 4) + 0x30);
+uart_transmit((temp & 0x0F) + 0x30);
 uart_transmit('\r');
 uart_transmit('\n');
 
+
+}
+
+void strikeOut(unsigned char s) {
+
+}
+
+void endGame() {
+
+	unsigned char i = 0;
+	char sc[10] = "Game Over!";
+	for(i = 0; i < 10; i++)
+		uart_transmit(sc[i]);
+	for(i = 0; i < 5; i++) {
+		uart_transmit('\r');
+		uart_transmit('\n');
+	}
 
 }
 
