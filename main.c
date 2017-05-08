@@ -50,7 +50,8 @@ unsigned char wait(int difficulty, unsigned char row, unsigned char col); //Will
 void setPorts(void); //Making sure the LED's work on the simon-board by setting them into bi-directional mode
 unsigned char userUnlock(); //Must unlock the simon board by pressing the 'Game' button 3 times
 void printWelcome();//prints welcome message
-void buzz() interrupt 1 {
+
+void buzz() interrupt 1 {//interrupt for speaker
 
 speaker = ~speaker;
 
@@ -69,9 +70,9 @@ void main(void) {
 	unsigned char startGame = 0; //Determines whether or not hte game will start based on the code entered, just press the game LED ()
 	unsigned char randSeed = 0;
 	setPorts(); //has to be called after these variables are declared
-	uart_init();
+	uart_init();//Initialize the serial communications 
 
-	clearStrikes();
+	clearStrikes();//Set Strikes off before the main game
 	
     startGame = userUnlock();
 	if(startGame == 1){
@@ -128,9 +129,9 @@ void main(void) {
 		delay();
 	  }while(!gameOver);
 
-	  endGame();
-	  endBuzzer();
-	  clearStrikes();
+	  endGame();//Reset all values, send gameover test
+	  endBuzzer();//Ending Tone
+	  clearStrikes();//Clear all strikes
 	  menu = 0;
 	  strikes = 0;
 	  score = 0;
@@ -294,7 +295,7 @@ unsigned char getHole(unsigned char row, unsigned col) //Gets the value for the 
 unsigned char wait(int difficulty, unsigned char row, unsigned char col) //Boolean is not a default type in C. Will return 1 if button is pressed on time
   {
     unsigned int index;
-    TMOD = 0x01;
+    TMOD = 0x01;//Timer 0 mode 1
 	
 
     for (index = 0; index < difficulty; index++) {
@@ -317,7 +318,7 @@ unsigned char wait(int difficulty, unsigned char row, unsigned char col) //Boole
   } //end wait function
 
 void setPorts(void) {
-  P0M1 = 0x00; //Set ports 0, 1, and 2 into bi-mode - comment out until it's ready for the simon2
+  P0M1 = 0x00; //Set ports 0, 1, 2, and 3 into bi-mode 
   P0M2 = 0x00;
   P1M1 = 0x00;
   P1M2 = 0x00;
@@ -360,7 +361,7 @@ void getTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) 
 	return;
 }
 
-void missTone() {
+void missTone() {//Random freq. to create a foul note, for when you miss a mole
 	TMOD = 0x01;
 	TH0 = 0xFF;
 	TL0 = 0xFF;
@@ -431,7 +432,7 @@ void ft4() {//concert D
 
 	return;
 }
-void endBuzzer(void){
+void endBuzzer(void){//Series of tones for the game over 
 	  ft1();
 	  delay();
 	  ft1();
@@ -453,16 +454,11 @@ void endBuzzer(void){
 	  ft4();
 	  delay();
 }
-void sendData(char score) {
+void sendData(char score) {//Send the score to the serial terminal
 unsigned char i = 0;
 char temp = 0;
 char sc[10] = "Score :";
-//lower = score & 0x0F;
-//upper = score & 0xF0;
-//upper = (lower > 9) ? (upper+1) : (upper);
-//upper = (upper % 10) + 0x30;
-//lower = (lower % 10) + 0x30;
-temp = ((score / 10) << 4) | (score % 10);
+temp = ((score / 10) << 4) | (score % 10);//Convert Score to BSD
 
 while(sc[i] != '\0'){
 	uart_transmit(sc[i]);
@@ -470,15 +466,15 @@ while(sc[i] != '\0'){
 }
 
 i = 0;
-uart_transmit(((temp & 0xF0) >> 4) + 0x30);
-uart_transmit((temp & 0x0F) + 0x30);
-uart_transmit('\r');
-uart_transmit('\n');
+uart_transmit(((temp & 0xF0) >> 4) + 0x30);//Send the Most significant byte of BSD, convert it to ASCII
+uart_transmit((temp & 0x0F) + 0x30);//Send the least significant byte of BSD, convert to ASCII
+uart_transmit('\r');//Carriage Return
+uart_transmit('\n');//New Line
 
 
 }
 
-void strikeOut(unsigned char s) {
+void strikeOut(unsigned char s) {//Lights the LEDs on the breadboard for when you get a strike out
  switch(s){
    case 1:
      strike1 = ~strike1;
@@ -490,12 +486,12 @@ void strikeOut(unsigned char s) {
  delay();
 }
 
-void clearStrikes(void){
+void clearStrikes(void){//Reset the strike LEDs
   strike1 = ~strike1;
   strike2 = ~strike2;
 }
 
-void endGame() {
+void endGame() {//Present the Game Over string to the serial terminal
 
 	unsigned char i = 0;
 	char sc[10] = "Game Over!";
@@ -507,30 +503,30 @@ void endGame() {
 	}
 }
 
-unsigned char userUnlock(){
+unsigned char userUnlock(){//Unlocking feature for the very beginning
   unsigned char row, col;
-  unsigned char numPresses;
-  unsigned char randSeeder;
+  unsigned char numPresses;//Counter Index
+  unsigned char randSeeder;//Used to seed rand()
   row = col = randSeeder = 0;
   numPresses = 0;
   while(numPresses < 3){
     randSeeder++;
     randSeeder = rand();
 	srand(randSeeder);
-    row = rand() % 3;
-	col = rand() % 3;
-	setLED(row,col);
+    row = rand() % 3;//Get random row
+	col = rand() % 3;//get col
+	setLED(row,col);//set LED
     if(!getHole(1,1)){
 	  numPresses++;
 	}
-	delay();
+	delay();//Using Generated Delay x 3
 	delay();
 	delay();
 	clearLED(row, col);
   }
   return 1;
 }
-void printWelcome(){
+void printWelcome(){//Print the welcome string to the serial terminal
   unsigned char i = 0;
   char msg[75] = "Welcome to Whack-a-mole! -- red for hard, yellow for medium, green for easy";
   for(i = 0; i < 75; i++)
