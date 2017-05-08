@@ -39,7 +39,7 @@ void clearLED(unsigned char row, unsigned char col); //Clears the specified LED 
 unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
 unsigned char wait(int difficulty, unsigned char row, unsigned char col); //Will return 1 if the button is pressed on time
 void setPorts(void); //Making sure the LED's work on the simon-board by setting them into bi-directional mode
-
+unsigned char userUnlock(); //Must unlock the simon board by pressing the 'Game' button 3 times
 void buzz() interrupt 1 {
 
 speaker = ~speaker;
@@ -58,9 +58,12 @@ void main(void) {
 	unsigned char result = 0;
 	unsigned char i = 0;
 	unsigned char strikes = 0;
+	unsigned char passcode = 0;
 	setPorts(); //has to be called after these variables are declared
 	uart_init();
-    
+
+    passcode = userUnlock();
+	if(passcode == 1){
     while (1) {
 
 		setLED(0, 0); //Difficulty One
@@ -121,7 +124,7 @@ void main(void) {
 	  gameOver = 0;
  
     }
-
+	}
   } //End main
 
 void setLED(unsigned char row, unsigned char col) {
@@ -307,6 +310,7 @@ void setPorts(void) {
   P1M2 = 0x00;
   P2M1 = 0x00;
   P2M2 = 0x00;
+  P3M1 = 0x00;
 }
 
 
@@ -395,7 +399,16 @@ void endGame() {
 		uart_transmit('\r');
 		uart_transmit('\n');
 	}
+}
 
+unsigned char userUnlock(){
+  unsigned char numPresses = 0;
+  while(numPresses < 3){
+    if(!getHole(1,1)){
+	  numPresses++;
+	}
+  }
+  return 1;
 }
 
 

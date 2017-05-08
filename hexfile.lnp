@@ -1,3 +1,3 @@
-"main.obj",
-"uart.obj" 
-TO "hexfile" 
+"..\..\..\linuxhome\projects\cpe3150\CPE3150\main.obj" 
+TO "..\..\..\linuxhome\projects\cpe3150\CPE3150\hexfile" 
+PRINT(".\hexfile.m51")
