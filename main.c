@@ -21,25 +21,35 @@ sbit hole2_0 = P2 ^ 1;
 sbit hole2_1 = P0 ^ 3;
 sbit hole2_2 = P2 ^ 2;
 
-sbit strike1 = P3 ^ 1;//Strike outs
-sbit strike2 = P3 ^ 0;
-sbit strike3 = P1 ^ 0;
+sbit strike1 = P3 ^ 0;//Strike outs
+sbit strike2 = P3 ^ 1;
 
 sbit speaker = P1 ^ 7;//Speaker / buzzer
 
+code const unsigned char DIFFICULTY_ONE = 20;
+code const unsigned char DIFFICULTY_TWO = 40;
+code const unsigned char DIFFICULTY_THREE = 60;
 
-void delay();
-void strikeOut(unsigned char s);
-void getTone();
-void missTone();
-void endGame();
-void sendData(char score);
+
+void delay(); //Simple delay function, used almost everywhere
+void strikeOut(unsigned char s); //Turns on the LED's on the breadboard based on numStrikes
+void clearStrikes(); //turns off all strike LED's upon the ending of a game
+void getTone(); //displays a tone on a successful mole
+void missTone();  //Displays a tone on a missed mole
+void ft1();//a series of tones for the gameover conditions
+void ft2();//^
+void ft3();//^
+void ft4();//^
+void endBuzzer(); //implements the ft<1-4> functions
+void endGame(); //sends a game over message to the monitor serially
+void sendData(char score); //Sends the score serially to the monitor
 void setLED(unsigned char row, unsigned char col); //Sets the specified LED (sets it to 0)
 void clearLED(unsigned char row, unsigned char col); //Clears the specified LED (sets it to 1)
 unsigned char getHole(unsigned char row, unsigned char col); //Gets the current value for the button
 unsigned char wait(int difficulty, unsigned char row, unsigned char col); //Will return 1 if the button is pressed on time
 void setPorts(void); //Making sure the LED's work on the simon-board by setting them into bi-directional mode
 unsigned char userUnlock(); //Must unlock the simon board by pressing the 'Game' button 3 times
+void printWelcome();//prints welcome message
 void buzz() interrupt 1 {
 
 speaker = ~speaker;
@@ -49,23 +59,24 @@ speaker = ~speaker;
 void main(void) {
 
     unsigned int difficulty; //using the max demay for a timer, this is the number of loops that we will wait for at max time
-    unsigned char test = 0;
     unsigned char menu = 0; //Var to decide if the game is over (main loop control var)
-	unsigned char gameOver = 0;
-	unsigned char row = 0;
-	unsigned char col = 0;
-	unsigned char score = 0;
-	unsigned char result = 0;
-	unsigned char i = 0;
-	unsigned char strikes = 0;
-	unsigned char passcode = 0;
+	unsigned char gameOver = 0; //determines whether or not the game is over
+	unsigned char row = 0; //The random row selected
+	unsigned char col = 0; //The random column selected
+	unsigned char score = 0; //The score that the user has accumulated
+	unsigned char result = 0; //Determines whether or not hte wait function returned a 
+	unsigned char strikes = 0; //The current num of strikes the user has accumulated
+	unsigned char startGame = 0; //Determines whether or not hte game will start based on the code entered, just press the game LED ()
+	unsigned char randSeed = 0;
 	setPorts(); //has to be called after these variables are declared
 	uart_init();
 
-    passcode = userUnlock();
-	if(passcode == 1){
+	clearStrikes();
+	
+    startGame = userUnlock();
+	if(startGame == 1){
     while (1) {
-
+	    printWelcome();
 		setLED(0, 0); //Difficulty One
     	setLED(0, 1); //Difficulty Two
     	setLED(0, 2); //Difficulty Three
@@ -73,51 +84,53 @@ void main(void) {
 	  do { //Main Menu Loop
         //Should probably do this all in a function to keep our Main clean
         if (!getHole(0, 0)) {
-          difficulty = 20;//Hard - Magic
+          difficulty = DIFFICULTY_ONE;//Hard - Magic
 		  menu = 1;
         } else if (!getHole(0, 1)) {
-          difficulty = 40;//Medium - Magic
+          difficulty = DIFFICULTY_TWO;//Medium - Magic
 		  menu = 1;
         } else if (!getHole(0, 2)) {
-          difficulty = 60;//Easy - Magic
+          difficulty = DIFFICULTY_THREE;//Easy - Magic
 		  menu = 1;
         }
       } while (!menu);
-	  clearLED(0, 0);
+	  clearLED(0, 0); //Clears the Difficulty LED's
 	  clearLED(0, 1);
 	  clearLED(0, 2);
-
 	  //Game Loop
+	  
 	  do {
+	    randSeed++;
+	    randSeed = rand();
+	    srand(randSeed);
 		row = rand() % 3;
 		col = rand() % 3;
 		setLED(row, col);
-		result = wait(difficulty, row, col);
+		result = wait(difficulty, row, col); //Calls the wait function to determine whether or not the user pressed the button on time
 		if(result) {
 			score++;
-			sendData(score);
-			getTone();
+			sendData(score); //sends the score to the monitor
+			getTone(); //Plays the correct tone
 			//Send Score to Serial
 		}
 		else {
 			//Light up ohe LED on breabdoard
 			strikes++;
-			missTone();
+			missTone(); //Plays a tone for a missed button press
 			missTone();
 			missTone();
 			strikeOut(strikes);
 			if(strikes == 3)
 				gameOver = 1;
 		}
-		clearLED(row, col);
+		clearLED(row, col); //Clears the randomly Selected Mole
+		delay(); //Adds delay so the game is possible
 		delay();
-		delay();
-
-		
-
 	  }while(!gameOver);
 
 	  endGame();
+	  endBuzzer();
+	  clearStrikes();
 	  menu = 0;
 	  strikes = 0;
 	  score = 0;
@@ -311,6 +324,7 @@ void setPorts(void) {
   P2M1 = 0x00;
   P2M2 = 0x00;
   P3M1 = 0x00;
+  P3M2 = 0x00;
 }
 
 
@@ -346,7 +360,7 @@ void getTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) 
 	return;
 }
 
-void missTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*) = 5309 *(This microcontroller is 6 times faster than the standard 8051)
+void missTone() {
 	TMOD = 0x01;
 	TH0 = 0xFF;
 	TL0 = 0xFF;
@@ -359,6 +373,85 @@ void missTone() {//C ^ 6, 1046 Hz, (1/1046) = 0.00096s = 960us, 960us/(1.085/6*)
 	ET0 = 0;
 
 	return;
+}
+
+void ft1() {//concert F
+	TMOD = 0x01;
+	TH0 = 0x0F;
+	TL0 = 0x8D;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	ET0 = 0;
+
+	return;
+}
+void ft2() {//concert E
+	TMOD = 0x01;
+	TH0 = 0x10;
+	TL0 = 0x68;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	ET0 = 0;
+
+	return;
+}
+void ft3() {//concert Eb
+	TMOD = 0x01;
+	TH0 = 0x11;
+	TL0 = 0x47;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	ET0 = 0;
+
+	return;
+}
+void ft4() {//concert D
+	TMOD = 0x01;
+	TH0 = 0x12;
+	TL0 = 0x5C;
+	EA = 1;
+	ET0 = 1;
+	TR0 = 1;
+	delay();
+	TR0 = 0;
+	TF0 = 0;
+	ET0 = 0;
+
+	return;
+}
+void endBuzzer(void){
+	  ft1();
+	  delay();
+	  ft1();
+	  delay();
+	  ft2();
+	  delay();
+	  ft2();
+	  delay();
+	  ft3();
+	  delay();
+	  ft3();
+	  delay();
+	  ft4();
+	  delay();
+	  ft4();
+	  delay();
+	  ft4();
+	  delay();
+	  ft4();
+	  delay();
 }
 void sendData(char score) {
 unsigned char i = 0;
@@ -386,7 +479,20 @@ uart_transmit('\n');
 }
 
 void strikeOut(unsigned char s) {
+ switch(s){
+   case 1:
+     strike1 = ~strike1;
+	 break;
+   case 2:
+     strike2 = ~strike2;
+	 break;
+ }
+ delay();
+}
 
+void clearStrikes(void){
+  strike1 = ~strike1;
+  strike2 = ~strike2;
 }
 
 void endGame() {
@@ -402,13 +508,38 @@ void endGame() {
 }
 
 unsigned char userUnlock(){
-  unsigned char numPresses = 0;
+  unsigned char row, col;
+  unsigned char numPresses;
+  unsigned char randSeeder;
+  row = col = randSeeder = 0;
+  numPresses = 0;
   while(numPresses < 3){
+    randSeeder++;
+    randSeeder = rand();
+	srand(randSeeder);
+    row = rand() % 3;
+	col = rand() % 3;
+	setLED(row,col);
     if(!getHole(1,1)){
 	  numPresses++;
 	}
+	delay();
+	delay();
+	delay();
+	clearLED(row, col);
   }
   return 1;
+}
+void printWelcome(){
+  unsigned char i = 0;
+  char msg[75] = "Welcome to Whack-a-mole! -- red for hard, yellow for medium, green for easy";
+  for(i = 0; i < 75; i++)
+    uart_transmit(msg[i]);
+  for(i = 0; i < 3; i++){
+    uart_transmit('\r');
+	uart_transmit('\n');
+  }
+  return;
 }
 
 
